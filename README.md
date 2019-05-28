@@ -2,7 +2,7 @@
 
 [![Docker Build Status](https://img.shields.io/docker/pulls/justincormack/nsenter1.svg)](justincormack/nsenter1)
 
-Minimal image for `nsenter` to namespaces of PID 1
+Convenience image to `nsenter` into namespaces for PID 1:
 
 * mnt
 * uts
@@ -14,19 +14,25 @@ To achieve the above with the basic alpine image you would enter:
     $ docker run -it --rm --privileged --pid=host alpine:edge nsenter -t 1 -m -u -n -i sh
     / #
 
-Unfortunately, however, there is an [outstanding issue](https://github.com/gliderlabs/docker-alpine/issues/359)
-that prevents specifying the target pid.
+All this image does is save you from remembering all the `nsenter` options for the namespaces shown above,
+but you still need to remember the docker container options.
+
+There was an [outstanding issue](https://github.com/gliderlabs/docker-alpine/issues/359)
+that prevented specifying the target pid with earlier versions of Alpine that necessitated the
+creation of a custom image ([justincormack/nsenter1](https://github.com/justincormack/nsenter1))
+with a program written in C to set things up correctly, although this is no longer needed.
 
 With this image, you can simply run the following:
 
-    $ docker run -it --rm --privileged --pid=host justincormack/nsenter1
+    $ docker run -it --rm --privileged --pid=host subfuzion/nsenter1
     / #
 
 ## So what is this good for
 
-`nsenter` allows you to enter a shell in a running container (technically into the namespaces that provide
-a container's isolation and limited access to system resources). The crazy thing is that this image allows
-you to run a privileged container that runs nsenter for the process space running as pid 1. How is this useful?
+The `nsenter` command lets you to enter a shell in a running container (technically into the namespaces
+that provide a container's isolation and limited access to system resources). This image allows
+you to run a privileged container that runs nsenter for the process space running as pid 1 on your host.
+How is this useful?
 
 Well, this is useful when you are running a lightweight, container-optimized Linux distribution such as
 [LinuxKit](https://blog.docker.com/2017/04/introducing-linuxkit-container-os-toolkit/).
@@ -37,16 +43,20 @@ your host directly, but are running instead inside of a minimal Linux OS virtual
 running containers, i.e., LinuxKit. But being a lightweight environment, LinuxKit isn't running `sshd`, so
 how do you get access to a shell so you can run `nsenter` to inspect the namespaces for the process running as pid 1?
 
-Well, you could run the following:
+You could run the following:
 
     $ screen ~/Library/Containers/com.docker.docker/Data/com.docker.driver.amd64-linux/tty
 
 Docker for Mac does expose a screen session to attach to, but it's a bit less than ideal if you're not familiar
-with screen. It's not a big deal, but it's not optimal and it's also very specific to Docker for Mac. Since
-we're already running Docker the general solution is ideal in this case:
+with screen. It's not a big deal, but it's not optimal and it's also very specific to Docker for Mac.
+
+So the general solution using Docker is to run a container inside of the Linux VM that is mapped to
+host process namespace (`--pid=host`). Of course, this container will need to run as a privileged
+container (`--privileged`). Finally, to be useful for interactive work, you will both STDIN and a TTY
+(`-it`). The following demonstrates this:
 
 ```
-$ docker run -it --rm --privileged --pid=host justincormack/nsenter1
+$ docker run -it --rm --privileged --pid=host subfuzion/nsenter1
 / # ip a
 256: vethb72bfa3@if255: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue master docker0 state UP
     link/ether 7a:41:32:02:63:7c brd ff:ff:ff:ff:ff:ff
