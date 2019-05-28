@@ -1,7 +1,5 @@
 # nsenter1
 
-[![Docker Build Status](https://img.shields.io/docker/pulls/justincormack/nsenter1.svg)](justincormack/nsenter1)
-
 Convenience image to `nsenter` into namespaces for PID 1:
 
 * mnt
@@ -51,12 +49,17 @@ Docker for Mac does expose a screen session to attach to, but it's a bit less th
 with screen. It's not a big deal, but it's not optimal and it's also very specific to Docker for Mac.
 
 So the general solution using Docker is to run a container inside of the Linux VM that is mapped to
-host process namespace (`--pid=host`). Of course, this container will need to run as a privileged
-container (`--privileged`). Finally, to be useful for interactive work, you will both STDIN and a TTY
-(`-it`). The following demonstrates this:
+host process namespace (`--pid=host`) -- and just to be clear, `host` in this case refers to the Linux VM, not
+your system host. Of course, this container will need to run as a privileged container (`--privileged`) to access
+host namespaces. To be useful for interactive work, you will both STDIN and a TTY (`-it`). Finally, consider
+naming your container to make identifying it easier in case you decide to detach and then reattach to it later
+(of course, names need to be unique if you're going to run multiple containers at the same time).
+
+So here is an example of this in action:
+
 
 ```
-$ docker run -it --rm --privileged --pid=host subfuzion/nsenter1
+$ docker run -it --rm --privileged --pid=host --name=nsenter1 subfuzion/nsenter1
 / # ip a
 256: vethb72bfa3@if255: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue master docker0 state UP
     link/ether 7a:41:32:02:63:7c brd ff:ff:ff:ff:ff:ff
